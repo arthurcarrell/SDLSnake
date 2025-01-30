@@ -10,6 +10,7 @@ Game engine that uses pixels
 #include <SDL3/SDL_pixels.h>
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_init.h>
+#include <SDL3/SDL_rect.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <list>
@@ -22,19 +23,28 @@ Game engine that uses pixels
 
 using namespace std;
 
-
+bool debugMode = true;
 const char PROJECT_Version[] = "1.0"; // project version; self explanatory.
 const char PROJECT_ProjectName[] = "com.asteristired.snake"; // the internal name of the project, no spaces or special characters.
 const char PROJECT_AppName[] = "Snake"; // the name that appears on the window.
 
-const int WINDOW_Width = 1280;
+const int WINDOW_Width = 720;
 const int WINDOW_Height = 720;
 
 /* how many spaces there are in the game. DOES NOT represent the size of the window */
-const int GAME_MAX_X = 100; 
-const int GAME_MAX_Y = 100;
+const int GAME_MAX_X = 30; 
+const int GAME_MAX_Y = 30;
 
-const int PIXELS_PER_CELL = 1; // if this number goes below 1, stuff breaks real bad.
+const int PIXELS_PER_CELL = 30; // if this number goes below 1, stuff breaks real bad.
+
+int gameMap[GAME_MAX_X*GAME_MAX_Y]; /*
+
+0 on the game map represents empty space.
+1 on the game map represents the snake body
+2 on the game map represents the apple
+
+*/
+
 
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
@@ -43,6 +53,7 @@ class Snake {
     public:
         vec2 position;
         list<vec2> previous_positions;
+        int size;
 
 };
 
@@ -54,17 +65,19 @@ class Apple {
 Snake createSnake() {
     Snake snake;
     snake.position = {0, 0};
+    snake.size = 1;
     return snake;
 }
 
 Snake snake = createSnake();
 Apple apple;
 
-const color SNAKE_BODY = {74, 208, 26, SDL_ALPHA_OPAQUE};
+const color SNAKE_BODY_COLOR = {74, 208, 26, SDL_ALPHA_OPAQUE};
+const color APPLE_COLOR = {246, 64, 83, SDL_ALPHA_OPAQUE};
 const color BACKGROUND_COLOR = {0, 0, 0, SDL_ALPHA_OPAQUE};
 /*
 ===========================================================================================================
-                                                SNAKE GAME
+                                                RENDERING CODE
 ===========================================================================================================
 */
 
@@ -73,24 +86,89 @@ void SnakeGame_Init(void **appstate, int argc, char *argv[]) {
     return;
 }
 
-/* Runs on key press/mouse click */
-void SnakeGame_AppEvent(void *appstate, SDL_Event *event) {
-    return;
+
+int DrawCell(int x, int y) {
+
+    SDL_FRect rectangle;
+    rectangle.x = x;
+    rectangle.y = y;
+    rectangle.h = PIXELS_PER_CELL;
+    rectangle.w = PIXELS_PER_CELL;
+
+    if (debugMode) { SDL_RenderRect(renderer, &rectangle); } else {SDL_RenderFillRect(renderer, &rectangle); }
+    // return 0 for success.
+    return 0;
 }
 
+void handleDrawData(int currentCell) {
+    if (gameMap[currentCell] == 0) {
+        // nothing, draw in the background color.
+        if (debugMode) {
+            SDL_SetRenderDrawColor(renderer, 100, 100, 100, SDL_ALPHA_OPAQUE);
+        } else {
+            SDL_SetRenderDrawColor(renderer, BACKGROUND_COLOR.R, BACKGROUND_COLOR.G, BACKGROUND_COLOR.B, BACKGROUND_COLOR.A);
+        }
+        
+    } else if (gameMap[currentCell] == 1) {
+        // the snake body, draw the snake
+        SDL_SetRenderDrawColor(renderer, SNAKE_BODY_COLOR.R, SNAKE_BODY_COLOR.G, SNAKE_BODY_COLOR.B, SNAKE_BODY_COLOR.A);
+    } else if (gameMap[currentCell] == 2){
+        // the apple, draw the apple.
+        SDL_SetRenderDrawColor(renderer, APPLE_COLOR.R, APPLE_COLOR.G, APPLE_COLOR.B, APPLE_COLOR.A);
+    }
+}
+
+void DrawCellMap() {
+    int currentCell = 0;
+    for (int y=0;y < GAME_MAX_Y; y++) {
+        for (int x=0;x < GAME_MAX_X; x++) {
+            handleDrawData(currentCell);
+            DrawCell(x*PIXELS_PER_CELL, y*PIXELS_PER_CELL);
+            currentCell++;
+        }
+        currentCell++;
+    }
+}
 /* Runs each frame */
 void SnakeGame_Iterate(void *appstate) {
     // set the background color to BACKGROUND and then clear the render.
     SDL_SetRenderDrawColor(renderer, BACKGROUND_COLOR.R, BACKGROUND_COLOR.G, BACKGROUND_COLOR.B, BACKGROUND_COLOR.A);
     SDL_RenderClear(renderer);
-
-
-
-
+    gameMap[(GAME_MAX_X*GAME_MAX_Y)/2] = 2;
+    DrawCellMap();
     /* place the new render onto the screen */
     SDL_RenderPresent(renderer);
     return;
 }
+
+/*
+===========================================================================================================
+                                                SNAKE GAME CODE
+===========================================================================================================
+*/
+
+/*
+our gameMap is stored as an array, meaning that there arent any coordinates. this takes the index in as input,
+and returns an output as if it were a coordinate.
+Example: (in a 10x10 array) foo[50] --> {x: 5, y: 5}
+*/
+vec2 GetCellCoords(int target,int x_max) {
+    int x = target % x_max; // (target % width)
+    int y = target / x_max;
+
+    vec2 result = {x, y};
+    return result;
+}
+
+int getIndexOfCoords(int x, int y) {
+    return 0;
+}
+
+/* Runs on key press/mouse click */
+void SnakeGame_AppEvent(void *appstate, SDL_Event *event) {
+    return;
+}
+
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -154,6 +232,6 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
 }
 
 int main() {
-    cout << "Hello World!";
+    cout << "Hello World! if you are seeing this, something went wrong.";
     return 1;
 }
