@@ -61,7 +61,7 @@ Snake snake = createSnake();
 Apple apple;
 
 const color SNAKE_BODY = {74, 208, 26, SDL_ALPHA_OPAQUE};
-const color BACKGROUND_COLOR = {0,0,0,SDL_ALPHA_OPAQUE};
+const color BACKGROUND_COLOR = {0, 0, 0, SDL_ALPHA_OPAQUE};
 /*
 ===========================================================================================================
                                                 SNAKE GAME
@@ -69,23 +69,24 @@ const color BACKGROUND_COLOR = {0,0,0,SDL_ALPHA_OPAQUE};
 */
 
 /* Runs on program start */
-void SnakeGame_Init() {
+void SnakeGame_Init(void **appstate, int argc, char *argv[]) {
     return;
 }
 
 /* Runs on key press/mouse click */
-void SnakeGame_AppEvent() {
+void SnakeGame_AppEvent(void *appstate, SDL_Event *event) {
     return;
 }
 
 /* Runs each frame */
-void SnakeGame_Iterate() {
-    // set the background color to BACKGROUND.
+void SnakeGame_Iterate(void *appstate) {
+    // set the background color to BACKGROUND and then clear the render.
     SDL_SetRenderDrawColor(renderer, BACKGROUND_COLOR.R, BACKGROUND_COLOR.G, BACKGROUND_COLOR.B, BACKGROUND_COLOR.A);
-
-    /* clear the window to the draw colour */
     SDL_RenderClear(renderer);
-    
+
+
+
+
     /* place the new render onto the screen */
     SDL_RenderPresent(renderer);
     return;
@@ -120,14 +121,14 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 
     }
 
-    SnakeGame_Init();
+    SnakeGame_Init(appstate,argc,argv);
     // everything has been properly intialised. continue with the program.
     return SDL_APP_CONTINUE;
 }
 
 /* runs on I/O interrupt. This could be a keypress or a mouse click. */
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
-    SnakeGame_AppEvent();
+    SnakeGame_AppEvent(appstate, event);
     if (event->type == SDL_EVENT_QUIT) {
         // a key that means quit the program has been pressed. (my example: SUPER+SHIFT+Q)
         return SDL_APP_SUCCESS; // quit the program, but in an intentional way, we are not quitting due to an error.
@@ -139,7 +140,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 /* Runs once per frame, the meat and potatoes of the program. */
 SDL_AppResult SDL_AppIterate(void *appstate) {
     // success, continue the program.
-    SnakeGame_Iterate();
+    SnakeGame_Iterate(appstate);
     return SDL_APP_CONTINUE;
 
 }
