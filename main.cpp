@@ -32,17 +32,16 @@ const int WINDOW_Width = 720;
 const int WINDOW_Height = 720;
 
 /* how many spaces there are in the game. DOES NOT represent the size of the window */
-const int GAME_MAX_X = 30; 
-const int GAME_MAX_Y = 30;
+const int GAME_MAX_X = 24; 
+const int GAME_MAX_Y = 24;
 
-const int PIXELS_PER_CELL = 30; // if this number goes below 1, stuff breaks real bad.
+const int PIXELS_PER_CELL = 30; // if this number goes below 1, stuff breaks real bad. also this number MUST be cleanly divisible by (WINDOW_Width * WINDOW_Height)
 
-int gameMap[GAME_MAX_X*GAME_MAX_Y]; /*
-
+int gameMap[GAME_MAX_X*GAME_MAX_Y];
+/*
 0 on the game map represents empty space.
 1 on the game map represents the snake body
 2 on the game map represents the apple
-
 */
 
 
@@ -64,7 +63,7 @@ class Apple {
 
 Snake createSnake() {
     Snake snake;
-    snake.position = {0, 0};
+    snake.position = {11, 11};
     snake.size = 1;
     return snake;
 }
@@ -88,7 +87,6 @@ void SnakeGame_Init(void **appstate, int argc, char *argv[]) {
 
 
 int DrawCell(int x, int y) {
-
     SDL_FRect rectangle;
     rectangle.x = x;
     rectangle.y = y;
@@ -100,7 +98,7 @@ int DrawCell(int x, int y) {
     return 0;
 }
 
-void handleDrawData(int currentCell) {
+void HandleDrawData(int currentCell) {
     if (gameMap[currentCell] == 0) {
         // nothing, draw in the background color.
         if (debugMode) {
@@ -122,7 +120,7 @@ void DrawCellMap() {
     int currentCell = 0;
     for (int y=0;y < GAME_MAX_Y; y++) {
         for (int x=0;x < GAME_MAX_X; x++) {
-            handleDrawData(currentCell);
+            HandleDrawData(currentCell);
             DrawCell(x*PIXELS_PER_CELL, y*PIXELS_PER_CELL);
             currentCell++;
         }
@@ -134,7 +132,7 @@ void SnakeGame_Iterate(void *appstate) {
     // set the background color to BACKGROUND and then clear the render.
     SDL_SetRenderDrawColor(renderer, BACKGROUND_COLOR.R, BACKGROUND_COLOR.G, BACKGROUND_COLOR.B, BACKGROUND_COLOR.A);
     SDL_RenderClear(renderer);
-    gameMap[(GAME_MAX_X*GAME_MAX_Y)/2] = 2;
+    
     DrawCellMap();
     /* place the new render onto the screen */
     SDL_RenderPresent(renderer);
@@ -160,12 +158,31 @@ vec2 GetCellCoords(int target,int x_max) {
     return result;
 }
 
-int getIndexOfCoords(int x, int y) {
-    return 0;
+/* 
+    x + (y * (maxwidth_x+1))
+    returns the index in a 1D array, of what the coordinates would be.
+*/
+int GetIndexOfCoords(vec2 coords, int x_max) {
+    return coords.x + (coords.y * (x_max+1));
 }
 
+void Game() {
+    // reset the game map
+    for (int i=0; i < (GAME_MAX_X*GAME_MAX_Y)-1;i++) {
+        gameMap[i] = 0;
+    }
+
+    // place snake head
+    int snakeIndex = GetIndexOfCoords(snake.position, GAME_MAX_X);
+    gameMap[snakeIndex] = 1;
+
+    //debug. place apple in X: 2, Y: 2
+    vec2 testCoord = {2,2};
+    gameMap[GetIndexOfCoords(testCoord, GAME_MAX_X)] = 2;
+    
+}
 /* Runs on key press/mouse click */
-void SnakeGame_AppEvent(void *appstate, SDL_Event *event) {
+void SnakeGame_AppEvent(void *appstate, SDL_Event *event){
     return;
 }
 
@@ -218,6 +235,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 /* Runs once per frame, the meat and potatoes of the program. */
 SDL_AppResult SDL_AppIterate(void *appstate) {
     // success, continue the program.
+    Game();
     SnakeGame_Iterate(appstate);
     return SDL_APP_CONTINUE;
 
