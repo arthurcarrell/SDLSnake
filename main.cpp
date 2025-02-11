@@ -57,17 +57,24 @@ class Snake {
     public:
         vec2 position;
         vector<vec2> previous_positions;
-        int size;
+        int size = 0;
         char currentDirection = 'r';
         bool doesNeedToMove = false; 
         // Snake.Move() cannot be ran in an SDL_Timer function, as it is a seperate thread. so this is a flag telling the main thread to run Snake.Move();
 
         void Move(char direction) {
             // u,d,l,r 
+            previous_positions.insert(previous_positions.begin(), position);
             if (direction == 'u') { position.y -= 1;}
             else if (direction == 'd') {position.y += 1;}
             else if (direction == 'l') {position.x -= 1;}
             else if (direction == 'r') {position.x += 1;}
+
+            // check if the size of previous_positions is more then the snake size.
+            if (previous_positions.size() > size) {
+                // it is, so remove the last element.
+                previous_positions.pop_back();
+            }
         }
 
 };
@@ -85,7 +92,6 @@ class Apple {
 Snake createSnake() {
     Snake snake;
     snake.position = {11, 11};
-    snake.size = 1;
     return snake;
 }
 
@@ -228,6 +234,15 @@ Uint32 SnakeGame_FixedUpdate(void *userdata, Uint32 interval, Uint32 timestamp) 
     return FIXED_UPDATE_INTERVAL;
 }
 
+void doAppleCollision(Snake *snake, Apple *apple) {
+    // are we colliding with the apple?
+    if ((snake->position.x == apple->position.x) && (snake->position.y == apple->position.y)) {
+        // we are colliding with the apple, increase the snake size by one, and move the apple randomly
+        snake->size += 1;
+        apple->MoveRandom();
+    }
+}
+
 void Game() {
     // reset the game map
     for (int i=0; i < (GAME_MAX_X*GAME_MAX_Y);i++) {
@@ -246,8 +261,13 @@ void Game() {
 
     // place body
     DrawSnakeBody(&snake);
+
     // place apple
     gameMap[GetIndexOfCoords(apple.position, GAME_MAX_X)] = 2;
+
+
+    // check if touching the apple.
+    doAppleCollision(&snake, &apple);
     
 }
 /* Runs on key press/mouse click */
