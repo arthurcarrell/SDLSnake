@@ -3,12 +3,12 @@
 Game engine that uses pixels
 
 */
+#define SDL_MAIN_USE_CALLBACKS 1 /* run SDL_AppInit instead of main() */
+
 #include <SDL3/SDL_assert.h>
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_scancode.h>
 #include <cstddef>
-#define SDL_MAIN_USE_CALLBACKS 1 /* run SDL_AppInit instead of main() */
-
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_pixels.h>
@@ -18,6 +18,7 @@ Game engine that uses pixels
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <vector>
+#include <algorithm>
 
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_timer.h>
@@ -60,6 +61,7 @@ class Snake {
         int size = 0;
         char currentDirection = 'r';
         bool doesNeedToMove = false; 
+        bool isAlive = true;
         // Snake.Move() cannot be ran in an SDL_Timer function, as it is a seperate thread. so this is a flag telling the main thread to run Snake.Move();
 
         void Move(char direction) {
@@ -102,6 +104,7 @@ const color SNAKE_BODY_COLOR = {74, 208, 26, SDL_ALPHA_OPAQUE};
 const color SNAKE_HEAD_COLOR = {51, 124, 24, SDL_ALPHA_OPAQUE};
 const color APPLE_COLOR = {246, 64, 83, SDL_ALPHA_OPAQUE};
 const color BACKGROUND_COLOR = {0, 0, 0, SDL_ALPHA_OPAQUE};
+const color DEAD_SNAKE_COLOR = {50,50,50, SDL_ALPHA_OPAQUE};
 /*
 ===========================================================================================================
                                                 RENDERING CODE
@@ -145,6 +148,9 @@ void HandleDrawData(int currentCell) {
     } else if (gameMap[currentCell] == 3){
         // the snake head, draw the snake head
         SDL_SetRenderDrawColor(renderer, SNAKE_HEAD_COLOR.R, SNAKE_HEAD_COLOR.G, SNAKE_HEAD_COLOR.B, SNAKE_HEAD_COLOR.A);
+    } else if (gameMap[currentCell] == 4) {
+        // the dead snake, draw the gray snake.
+        SDL_SetRenderDrawColor(renderer, DEAD_SNAKE_COLOR.R, DEAD_SNAKE_COLOR.G, DEAD_SNAKE_COLOR.B, DEAD_SNAKE_COLOR.A);
     }
 }
 
@@ -201,7 +207,7 @@ void DrawSnakeBody(Snake *snake) {
     for (long unsigned int i=0; i < snake->previous_positions.size();i++) {
         // snake[i] == current vec2 of the snake body
         int currentSnakeBodyPos = GetIndexOfCoords(snake->previous_positions[i], GAME_MAX_X);
-        gameMap[currentSnakeBodyPos] = 1;
+        if (snake->isAlive) { gameMap[currentSnakeBodyPos] = 1; } else {gameMap[currentSnakeBodyPos] = 4; }
     }
 }
 
@@ -229,6 +235,10 @@ void SnakeGame_DoKeyboardInput(const SDL_Event *event, Snake *snake) {
     }
 }
 
+void GameOver(Snake *snake) {
+    snake->isAlive = false;
+}
+
 Uint32 SnakeGame_FixedUpdate(void *userdata, Uint32 interval, Uint32 timestamp)  {
     // updates once per second.
     /* tell the snake to move, because this is asynchronous, we might be modifying the snake while the main loop is reading from it.
@@ -247,6 +257,23 @@ void doAppleCollision(Snake *snake, Apple *apple) {
     }
 }
 
+void doSnakeCollision(Snake *snake) {
+    // check if we are colliding with ourselves.
+    // this is done by checking if snake.previous_positions contains snake.position
+    bool hasCollided = false;
+    for (int i=0; i < snake->previous_positions.size();i++) {
+        if ((snake->previous_positions.at(i).x == snake->position.x) && (snake->previous_positions.at(i).y == snake->position.y)) {
+            // yes there is a collision
+            hasCollided = true;
+            break;
+        }
+    }
+
+    if (hasCollided) {
+        GameOver(snake);
+    }
+}
+
 void Game() {
     // reset the game map
     for (int i=0; i < (GAME_MAX_X*GAME_MAX_Y);i++) {
@@ -254,14 +281,14 @@ void Game() {
     }
 
     // move snake if needed
-    if (snake.doesNeedToMove) {
+    if (snake.doesNeedToMove && snake.isAlive) {
         snake.Move(snake.currentDirection);
         snake.doesNeedToMove = false;
     }
 
     // place snake head
     int snakeIndex = GetIndexOfCoords(snake.position, GAME_MAX_X);
-    gameMap[snakeIndex] = 3;
+    if (snake.isAlive) { gameMap[snakeIndex] = 3; } else { gameMap[snakeIndex] = 4;}
 
     // place body
     DrawSnakeBody(&snake);
@@ -272,8 +299,12 @@ void Game() {
 
     // check if touching the apple.
     doAppleCollision(&snake, &apple);
+
+    // check if snake head touching snake body
+    doSnakeCollision(&snake);
     
 }
+
 /* Runs on key press/mouse click */
 void SnakeGame_AppEvent(void *appstate, SDL_Event *event){
     SnakeGame_DoKeyboardInput(event, &snake);
