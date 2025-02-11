@@ -3,6 +3,9 @@
 Game engine that uses pixels
 
 */
+#include <SDL3/SDL_assert.h>
+#include <SDL3/SDL_log.h>
+#include <SDL3/SDL_scancode.h>
 #define SDL_MAIN_USE_CALLBACKS 1 /* run SDL_AppInit instead of main() */
 
 #include <SDL3/SDL_error.h>
@@ -13,7 +16,7 @@ Game engine that uses pixels
 #include <SDL3/SDL_rect.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
-#include <list>
+#include <vector>
 
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_timer.h>
@@ -51,8 +54,9 @@ static SDL_Renderer *renderer = NULL;
 class Snake {
     public:
         vec2 position;
-        list<vec2> previous_positions;
+        vector<vec2> previous_positions;
         int size;
+        char currentDirection = 'r';
 
 };
 
@@ -166,9 +170,41 @@ int GetIndexOfCoords(vec2 coords, int x_max) {
     return coords.x + (coords.y * (x_max));
 }
 
+void DrawSnakeBody() {
+    for (int i=0; i < snake.previous_positions.size();i++) {
+        // snake[i] == current vec2 of the snake body
+        int currentSnakeBodyPos = GetIndexOfCoords(snake.previous_positions[i], GAME_MAX_X);
+        gameMap[currentSnakeBodyPos] = 1;
+    }
+}
+
+void Snake_DoKeyboardInput(const SDL_Event *event, Snake *snake) {
+    // SDL_Event doesnt actually need to be a constant, its just incredibly bad practise to rewrite the event.
+
+    // check that it is only a SDL_EVENT_KEY_DOWN function. otherwise there is an assertion failure.
+    if (event->type != SDL_EVENT_KEY_DOWN) { return; }
+
+    SDL_assert(event->type == SDL_EVENT_KEY_DOWN);
+
+    // get the key press and see if its an arrow key, if it is, change the snake direction to match.
+    if (event->key.scancode == SDL_SCANCODE_UP) {
+        snake->currentDirection = 'u';
+        
+    } else if (event->key.scancode == SDL_SCANCODE_DOWN) {
+        snake->currentDirection = 'd';
+
+    } else if (event->key.scancode == SDL_SCANCODE_LEFT) {
+        snake->currentDirection = 'l';
+
+    } else if (event->key.scancode == SDL_SCANCODE_RIGHT) {
+        snake->currentDirection = 'r';
+
+    }
+}
+
 void Game() {
     // reset the game map
-    for (int i=0; i < (GAME_MAX_X*GAME_MAX_Y)-1;i++) {
+    for (int i=0; i < (GAME_MAX_X*GAME_MAX_Y);i++) {
         gameMap[i] = 0;
     }
 
@@ -183,6 +219,7 @@ void Game() {
 }
 /* Runs on key press/mouse click */
 void SnakeGame_AppEvent(void *appstate, SDL_Event *event){
+    Snake_DoKeyboardInput(event, &snake);
     return;
 }
 
