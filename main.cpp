@@ -99,6 +99,7 @@ Snake snake = createSnake();
 Apple apple;
 
 const color SNAKE_BODY_COLOR = {74, 208, 26, SDL_ALPHA_OPAQUE};
+const color SNAKE_HEAD_COLOR = {51, 124, 24, SDL_ALPHA_OPAQUE};
 const color APPLE_COLOR = {246, 64, 83, SDL_ALPHA_OPAQUE};
 const color BACKGROUND_COLOR = {0, 0, 0, SDL_ALPHA_OPAQUE};
 /*
@@ -141,6 +142,9 @@ void HandleDrawData(int currentCell) {
     } else if (gameMap[currentCell] == 2){
         // the apple, draw the apple.
         SDL_SetRenderDrawColor(renderer, APPLE_COLOR.R, APPLE_COLOR.G, APPLE_COLOR.B, APPLE_COLOR.A);
+    } else if (gameMap[currentCell] == 3){
+        // the snake head, draw the snake head
+        SDL_SetRenderDrawColor(renderer, SNAKE_HEAD_COLOR.R, SNAKE_HEAD_COLOR.G, SNAKE_HEAD_COLOR.B, SNAKE_HEAD_COLOR.A);
     }
 }
 
@@ -257,7 +261,7 @@ void Game() {
 
     // place snake head
     int snakeIndex = GetIndexOfCoords(snake.position, GAME_MAX_X);
-    gameMap[snakeIndex] = 1;
+    gameMap[snakeIndex] = 3;
 
     // place body
     DrawSnakeBody(&snake);
