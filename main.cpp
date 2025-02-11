@@ -124,7 +124,7 @@ void DrawCellMap() {
             DrawCell(x*PIXELS_PER_CELL, y*PIXELS_PER_CELL);
             currentCell++;
         }
-        currentCell++;
+        //currentCell++;
     }
 }
 /* Runs each frame */
@@ -163,7 +163,7 @@ vec2 GetCellCoords(int target,int x_max) {
     returns the index in a 1D array, of what the coordinates would be.
 */
 int GetIndexOfCoords(vec2 coords, int x_max) {
-    return coords.x + (coords.y * (x_max+1));
+    return coords.x + (coords.y * (x_max));
 }
 
 void Game() {
