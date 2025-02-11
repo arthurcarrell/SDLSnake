@@ -6,6 +6,7 @@ Game engine that uses pixels
 #include <SDL3/SDL_assert.h>
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_scancode.h>
+#include <cstddef>
 #define SDL_MAIN_USE_CALLBACKS 1 /* run SDL_AppInit instead of main() */
 
 #include <SDL3/SDL_error.h>
@@ -26,7 +27,7 @@ Game engine that uses pixels
 
 using namespace std;
 
-bool debugMode = true;
+bool debugMode = false;
 const char PROJECT_Version[] = "1.0"; // project version; self explanatory.
 const char PROJECT_ProjectName[] = "com.asteristired.snake"; // the internal name of the project, no spaces or special characters.
 const char PROJECT_AppName[] = "Snake"; // the name that appears on the window.
@@ -40,6 +41,7 @@ const int GAME_MAX_Y = 24;
 
 const int PIXELS_PER_CELL = 30; // if this number goes below 1, stuff breaks real bad. also this number MUST be cleanly divisible by (WINDOW_Width * WINDOW_Height)
 
+const int FIXED_UPDATE_INTERVAL = 250; // ms
 int gameMap[GAME_MAX_X*GAME_MAX_Y];
 /*
 0 on the game map represents empty space.
@@ -57,12 +59,27 @@ class Snake {
         vector<vec2> previous_positions;
         int size;
         char currentDirection = 'r';
+        bool doesNeedToMove = false; 
+        // Snake.Move() cannot be ran in an SDL_Timer function, as it is a seperate thread. so this is a flag telling the main thread to run Snake.Move();
+
+        void Move(char direction) {
+            // u,d,l,r 
+            if (direction == 'u') { position.y -= 1;}
+            else if (direction == 'd') {position.y += 1;}
+            else if (direction == 'l') {position.x -= 1;}
+            else if (direction == 'r') {position.x += 1;}
+        }
 
 };
 
 class Apple {
     public:
         vec2 position;
+
+        void MoveRandom() {
+            position.x = rand() % GAME_MAX_X;
+            position.y = rand() % GAME_MAX_Y;
+        }
 };
 
 Snake createSnake() {
@@ -86,6 +103,7 @@ const color BACKGROUND_COLOR = {0, 0, 0, SDL_ALPHA_OPAQUE};
 
 /* Runs on program start */
 void SnakeGame_Init(void **appstate, int argc, char *argv[]) {
+    apple.MoveRandom();
     return;
 }
 
@@ -128,7 +146,6 @@ void DrawCellMap() {
             DrawCell(x*PIXELS_PER_CELL, y*PIXELS_PER_CELL);
             currentCell++;
         }
-        //currentCell++;
     }
 }
 /* Runs each frame */
@@ -170,15 +187,15 @@ int GetIndexOfCoords(vec2 coords, int x_max) {
     return coords.x + (coords.y * (x_max));
 }
 
-void DrawSnakeBody() {
-    for (int i=0; i < snake.previous_positions.size();i++) {
+void DrawSnakeBody(Snake *snake) {
+    for (long unsigned int i=0; i < snake->previous_positions.size();i++) {
         // snake[i] == current vec2 of the snake body
-        int currentSnakeBodyPos = GetIndexOfCoords(snake.previous_positions[i], GAME_MAX_X);
+        int currentSnakeBodyPos = GetIndexOfCoords(snake->previous_positions[i], GAME_MAX_X);
         gameMap[currentSnakeBodyPos] = 1;
     }
 }
 
-void Snake_DoKeyboardInput(const SDL_Event *event, Snake *snake) {
+void SnakeGame_DoKeyboardInput(const SDL_Event *event, Snake *snake) {
     // SDL_Event doesnt actually need to be a constant, its just incredibly bad practise to rewrite the event.
 
     // check that it is only a SDL_EVENT_KEY_DOWN function. otherwise there is an assertion failure.
@@ -202,24 +219,40 @@ void Snake_DoKeyboardInput(const SDL_Event *event, Snake *snake) {
     }
 }
 
+Uint32 SnakeGame_FixedUpdate(void *userdata, Uint32 interval, Uint32 timestamp)  {
+    // updates once per second.
+    /* tell the snake to move, because this is asynchronous, we might be modifying the snake while the main loop is reading from it.
+       if this happens, there will be a crash. So a flag is set to let the main loop know to move the snake when it can instead. */
+    snake.doesNeedToMove = true;
+
+    return FIXED_UPDATE_INTERVAL;
+}
+
 void Game() {
     // reset the game map
     for (int i=0; i < (GAME_MAX_X*GAME_MAX_Y);i++) {
         gameMap[i] = 0;
     }
 
+    // move snake if needed
+    if (snake.doesNeedToMove) {
+        snake.Move(snake.currentDirection);
+        snake.doesNeedToMove = false;
+    }
+
     // place snake head
     int snakeIndex = GetIndexOfCoords(snake.position, GAME_MAX_X);
     gameMap[snakeIndex] = 1;
 
-    //debug. place apple in X: 2, Y: 2
-    vec2 testCoord = {2,2};
-    gameMap[GetIndexOfCoords(testCoord, GAME_MAX_X)] = 2;
+    // place body
+    DrawSnakeBody(&snake);
+    // place apple
+    gameMap[GetIndexOfCoords(apple.position, GAME_MAX_X)] = 2;
     
 }
 /* Runs on key press/mouse click */
 void SnakeGame_AppEvent(void *appstate, SDL_Event *event){
-    Snake_DoKeyboardInput(event, &snake);
+    SnakeGame_DoKeyboardInput(event, &snake);
     return;
 }
 
@@ -253,7 +286,14 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 
     }
 
+    // initiate a random seed
+    srand(time(NULL));
+
+    // begin doing the timer for the fixed updates.
+    SDL_AddTimer(FIXED_UPDATE_INTERVAL, SnakeGame_FixedUpdate, NULL);
+
     SnakeGame_Init(appstate,argc,argv);
+
     // everything has been properly intialised. continue with the program.
     return SDL_APP_CONTINUE;
 }
