@@ -44,9 +44,11 @@ const int PIXELS_PER_CELL = 30; // if this number goes below 1, stuff breaks rea
 const int FIXED_UPDATE_INTERVAL = 250; // ms
 int gameMap[GAME_MAX_X*GAME_MAX_Y];
 /*
-0 on the game map represents empty space.
+0 on the game map represents empty space
 1 on the game map represents the snake body
 2 on the game map represents the apple
+3 on the game map represents the snake head
+4 on the game map represents the dead snake
 */
 
 
@@ -269,6 +271,20 @@ void doSnakeCollision(Snake *snake) {
     }
 
     if (hasCollided) {
+        GameOver(snake);
+    }
+}
+
+void doWallCollision(Snake *snake) {
+    /*
+    Im actually not entirely sure how to implement this, because I made the whole system a 1D array. Its now actually pretty difficult to
+    check if we are going over bounds, as position.x will never go over GAME_MAX_X, it will simply loop over to 0.
+    I honestly do not want to work on this anymore, so rewriting the whole 1D array system is not happening.
+    */
+    // x position check
+    if (snake->position.x > GAME_MAX_X || snake->position.x < 0) {
+        GameOver(snake);
+    } else if (snake->position.y > GAME_MAX_Y || snake->position.y < 0) {
         GameOver(snake);
     }
 }
