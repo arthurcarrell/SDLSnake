@@ -37,13 +37,14 @@ const char PROJECT_AppName[] = "Snake"; // the name that appears on the window.
 const int WINDOW_Width = 720;
 const int WINDOW_Height = 720;
 
+const int FIXED_UPDATE_INTERVAL = 250; // ms
+
 /* how many spaces there are in the game. DOES NOT represent the size of the window */
 const int GAME_MAX_X = 24; 
 const int GAME_MAX_Y = 24;
 
 const int PIXELS_PER_CELL = 30; // if this number goes below 1, stuff breaks real bad. also this number MUST be cleanly divisible by (WINDOW_Width * WINDOW_Height)
 
-const int FIXED_UPDATE_INTERVAL = 250; // ms
 int gameMap[GAME_MAX_X*GAME_MAX_Y];
 /*
 0 on the game map represents empty space
@@ -59,13 +60,14 @@ static SDL_Renderer *renderer = NULL;
 
 class Snake {
     public:
-        vec2 position;
+        vec2 position = {(GAME_MAX_X/2), (GAME_MAX_Y/2)};
         vector<vec2> previous_positions;
         int size = 0;
         char currentDirection = 'r';
-        bool doesNeedToMove = false; 
-        bool isAlive = true;
+        bool doesNeedToMove = false;
+
         // Snake.Move() cannot be ran in an SDL_Timer function, as it is a seperate thread. so this is a flag telling the main thread to run Snake.Move();
+        bool isAlive = true;
 
         void Move(char direction) {
             // u,d,l,r 
@@ -81,7 +83,6 @@ class Snake {
                 previous_positions.pop_back();
             }
         }
-
 };
 
 class Apple {
@@ -94,20 +95,18 @@ class Apple {
         }
 };
 
-Snake createSnake() {
-    Snake snake;
-    snake.position = {11, 11};
-    return snake;
-}
 
-Snake snake = createSnake();
+Snake snake;
 Apple apple;
 
+/* SNAKE COLORS */
 const color SNAKE_BODY_COLOR = {74, 208, 26, SDL_ALPHA_OPAQUE};
 const color SNAKE_HEAD_COLOR = {51, 124, 24, SDL_ALPHA_OPAQUE};
+const color DEAD_SNAKE_COLOR = {50,50,50, SDL_ALPHA_OPAQUE};
+
+/* OTHER COLORS */
 const color APPLE_COLOR = {246, 64, 83, SDL_ALPHA_OPAQUE};
 const color BACKGROUND_COLOR = {0, 0, 0, SDL_ALPHA_OPAQUE};
-const color DEAD_SNAKE_COLOR = {50,50,50, SDL_ALPHA_OPAQUE};
 /*
 ===========================================================================================================
                                                 RENDERING CODE
@@ -279,7 +278,7 @@ void doSnakeCollision(Snake *snake) {
 
 void doWallCollision(Snake *snake) {
     // LMAO, turns out the previous problem wasnt actually true, and it wasnt working because I didnt call this function :P
-    
+
     if (snake->position.x > GAME_MAX_X-1) {
         // move the X position one back in order to prevent the loop around, and make it look like youve crashed into the wall.
         snake->position.x--;
@@ -294,6 +293,7 @@ void doWallCollision(Snake *snake) {
         // the Y position doesnt have to deal with the wrapping, but we will still adjust to get the snake on the screen.
         snake->position.y--;
         GameOver(snake);
+        
     } else if (snake->position.y < 0) {
         // same as above
         snake->position.y++;
@@ -310,8 +310,7 @@ void Game() {
     // move snake if needed
     if (snake.doesNeedToMove && snake.isAlive) {
         snake.Move(snake.currentDirection);
-        //if (snake.currentDirection == 'u') {SDL_Log("UP \n");} else if (snake.currentDirection == 'd') {SDL_Log("DOWN \n");} else if (snake.currentDirection == 'l') {SDL_Log("LEFT \n");} else if (snake.currentDirection == 'r') {SDL_Log("RIGHT \n");}
-        SDL_Log("X: %i - Y: %i - currentDirection: %c", snake.position.x, snake.position.y, snake.currentDirection);
+        if (debugMode) { SDL_Log("X: %i - Y: %i - currentDirection: %c", snake.position.x, snake.position.y, snake.currentDirection); }
         snake.doesNeedToMove = false;
     }
 
