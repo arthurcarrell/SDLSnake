@@ -18,7 +18,6 @@ Game engine that uses pixels
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <vector>
-#include <algorithm>
 
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_timer.h>
