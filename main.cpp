@@ -3,6 +3,8 @@
 Game engine that uses pixels
 
 */
+#include <cstdio>
+#include <cstring>
 #define SDL_MAIN_USE_CALLBACKS 1 /* run SDL_AppInit instead of main() */
 
 #include <SDL3/SDL_assert.h>
@@ -276,15 +278,25 @@ void doSnakeCollision(Snake *snake) {
 }
 
 void doWallCollision(Snake *snake) {
-    /*
-    Im actually not entirely sure how to implement this, because I made the whole system a 1D array. Its now actually pretty difficult to
-    check if we are going over bounds, as position.x will never go over GAME_MAX_X, it will simply loop over to 0.
-    I honestly do not want to work on this anymore, so rewriting the whole 1D array system is not happening.
-    */
-    // x position check
-    if (snake->position.x > GAME_MAX_X || snake->position.x < 0) {
+    // LMAO, turns out the previous problem wasnt actually true, and it wasnt working because I didnt call this function :P
+    
+    if (snake->position.x > GAME_MAX_X-1) {
+        // move the X position one back in order to prevent the loop around, and make it look like youve crashed into the wall.
+        snake->position.x--;
         GameOver(snake);
-    } else if (snake->position.y > GAME_MAX_Y || snake->position.y < 0) {
+    
+    } else if (snake->position.x < 0) {
+        // move the X position forward for the same reason described above.
+        snake->position.x++;
+        GameOver(snake);
+
+    } else if (snake->position.y > GAME_MAX_Y-1) {
+        // the Y position doesnt have to deal with the wrapping, but we will still adjust to get the snake on the screen.
+        snake->position.y--;
+        GameOver(snake);
+    } else if (snake->position.y < 0) {
+        // same as above
+        snake->position.y++;
         GameOver(snake);
     }
 }
@@ -298,6 +310,8 @@ void Game() {
     // move snake if needed
     if (snake.doesNeedToMove && snake.isAlive) {
         snake.Move(snake.currentDirection);
+        //if (snake.currentDirection == 'u') {SDL_Log("UP \n");} else if (snake.currentDirection == 'd') {SDL_Log("DOWN \n");} else if (snake.currentDirection == 'l') {SDL_Log("LEFT \n");} else if (snake.currentDirection == 'r') {SDL_Log("RIGHT \n");}
+        SDL_Log("X: %i - Y: %i - currentDirection: %c", snake.position.x, snake.position.y, snake.currentDirection);
         snake.doesNeedToMove = false;
     }
 
@@ -317,6 +331,9 @@ void Game() {
 
     // check if snake head touching snake body
     doSnakeCollision(&snake);
+
+    // do the wall collision
+    doWallCollision(&snake);
     
 }
 
